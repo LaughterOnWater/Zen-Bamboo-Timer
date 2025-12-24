@@ -19,6 +19,11 @@ A simple, beautiful, and fully responsive countdown timer that lives entirely in
 ## Preview
 
 > *Imagine a calming, clean interface split into two cards. On the left (or top), a large donut chart displaying the time. On the right (or bottom), a numeric keypad and playback controls. Soft muted greens and wood tones.*
+>
+> <figure>
+  <img src="images/zen-bamboo-timer-user-interface.png" alt="The User Interface - Available but not distracting." width="500">
+  <figcaption>The User Interface - Available but not distracting.</figcaption>
+</figure>
 
 ## Installation
 
