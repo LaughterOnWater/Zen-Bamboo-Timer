@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!--
+    Zen Bamboo Timer
+    Author: LaughterOnWater
+    Repository: https://github.com/LaughterOnWater/Zen-Bamboo-Timer
+    
+    Description: 
+    A minimalist, responsive, single-file countdown timer featuring a bamboo sound engine.
+    Designed to work directly in the browser with no dependencies.
+    
+    License: MIT
+    Feel free to use, modify, and distribute.
+    -->
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Zen Bamboo Timer</title>
+    <style>
+      :root {
+        --bg-color: #f4f4f0;
+        --card-bg: #ffffff;
+        --primary: #5d7a63;
+        --primary-light: #8fa894;
+        --accent: #d68c65;
+        --text-main: #2c3e50;
+        --text-sub: #7f8c8d;
+        --shadow-soft: 0 4vmin 8vmin rgba(0, 0, 0, 0.05);
+        --radius: 4vmin;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-color);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        color: var(--text-main);
+        /* Prevent overscroll bouncer on mobile */
+        overscroll-behavior: none;
+      }
+
+      /* Layout Container */
+      #app-container {
+        display: flex;
+        width: 100vw;
+        height: 100vh;
+        padding: 2vmin;
+        gap: 2vmin;
+        box-sizing: border-box;
+      }
+
+      /* Layout Directions */
+      @media (orientation: portrait) {
+        #app-container {
+          flex-direction: column;
+          justify-content: center;
+        }
+      }
+
+      @media (orientation: landscape) {
+        #app-container {
+          flex-direction: row;
+          justify-content: center;
+        }
+      }
+
+      /* Card Styles */
+      .card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-soft);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        /* Enforce Square Aspect Ratio within flex limits */
+        flex: 1;
+        aspect-ratio: 1 / 1;
+
+        min-width: 0;
+        min-height: 0;
+      }
+
+      /* Inner Wrapper */
+      .card-inner {
+        width: 100%;
+        height: 100%;
+        padding: 2vmin;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* --- Timer Card --- */
+      .timer-card .card-inner {
+        justify-content: space-between;
+        gap: 1vmin;
+      }
+
+      .donut-wrapper {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 0;
+        position: relative;
+      }
+
+      .donut-container {
+        width: 100%;
+        height: 100%;
+      }
+
+      svg.donut {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+        display: block;
+      }
+
+      circle.donut-bg {
+        fill: none;
+        stroke: #eee;
+        stroke-width: 6%;
+      }
+
+      circle.donut-segment {
+        fill: none;
+        stroke: var(--primary);
+        stroke-width: 6%;
+        stroke-linecap: round;
+        stroke-dasharray: 816;
+        stroke-dashoffset: 816;
+        transition: stroke-dashoffset 0.1s linear, stroke 0.3s;
+      }
+
+      .time-display {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        width: 100%;
+        pointer-events: none;
+      }
+
+      .time-text {
+        font-size: clamp(2rem, 8vmin, 5rem);
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-main);
+        margin: 0;
+        line-height: 1;
+      }
+
+      .status-text {
+        font-size: clamp(0.7rem, 2vmin, 1.2rem);
+        color: var(--text-sub);
+        margin-top: 1vmin;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+      }
+
+      /* --- Presets Area --- */
+      .presets-area {
+        height: 12%;
+        width: 100%;
+        display: flex;
+        gap: 1vmin;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 0 1vmin;
+        overflow: hidden;
+      }
+
+      .preset-btn {
+        background: none;
+        border: 1px solid #eee;
+        border-radius: 20px;
+        padding: 0.5vmin 1.5vmin;
+        font-size: clamp(0.6rem, 1.5vmin, 0.9rem);
+        color: var(--text-sub);
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s;
+        user-select: none; /* Important for long press text selection */
+        -webkit-user-select: none;
+        touch-action: manipulation;
+      }
+
+      .preset-btn:hover {
+        background: #f9f9f9;
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+
+      /* Visual feedback for deletion */
+      .preset-btn.deleting {
+        background-color: #fadbd8;
+        border-color: #e74c3c;
+        color: #e74c3c;
+      }
+
+      .add-preset-btn {
+        color: var(--accent);
+        border-color: var(--accent);
+        font-weight: bold;
+      }
+
+      /* --- Control Card --- */
+      .control-card .card-inner {
+        justify-content: space-between;
+        gap: 1vmin;
+      }
+
+      /* Keypad */
+      .keypad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.8vmin;
+        flex: 1;
+        width: 100%;
+        padding: 1vmin 0;
+      }
+
+      .key {
+        background: #fff;
+        border: none;
+        border-radius: 1.5vmin;
+        box-shadow: 0 0.4vmin 1vmin rgba(0, 0, 0, 0.1);
+        color: var(--text-main);
+        font-weight: 600;
+        padding: 0;
+        cursor: pointer;
+        transition: all 0.1s;
+        font-size: clamp(1.5rem, 4vmin, 2.5rem);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+        width: 100%;
+        height: 100%;
+      }
+
+      .key:active {
+        transform: translateY(0.4vmin);
+        box-shadow: none;
+        background: #f0f0f0;
+      }
+
+      .key.clear-key {
+        color: #e74c3c;
+        font-size: clamp(1rem, 3vmin, 1.8rem);
+        box-shadow: 0 0.4vmin 1vmin rgba(231, 76, 60, 0.15);
+      }
+
+      /* Controls Area */
+      .controls-bottom {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5vmin;
+        padding-bottom: 1vmin;
+        flex-shrink: 0;
+      }
+
+      .actions {
+        display: flex;
+        gap: 2vmin;
+        justify-content: center;
+        align-items: center;
+      }
+
+      /* Transport Buttons */
+      .btn-round {
+        width: 9vmin;
+        height: 9vmin;
+        min-width: 35px;
+        min-height: 35px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 0.8vmin 1.5vmin rgba(0, 0, 0, 0.15);
+        background: #ddd;
+      }
+
+      .btn-round .icon {
+        width: 5vmin;
+        height: 5vmin;
+        min-width: 18px;
+        min-height: 18px;
+        fill: currentColor;
+      }
+
+      .btn-round:active {
+        transform: scale(0.95);
+      }
+      .btn-round.hidden {
+        display: none;
+      }
+
+      .btn-start {
+        background: var(--primary);
+      }
+      .btn-pause {
+        background: var(--accent);
+      }
+      .btn-resume {
+        background: var(--primary-light);
+      }
+      .btn-stop {
+        background: #95a5a6;
+      }
+
+      /* Volume Slider */
+      .volume-control {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1vmin;
+        width: 100%;
+        height: 3vmin;
+      }
+
+      input[type="range"] {
+        -webkit-appearance: none;
+        width: 50%;
+        height: 0.4vmin;
+        background: #ddd;
+        border-radius: 2px;
+        outline: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 2.5vmin;
+        height: 2.5vmin;
+        background: var(--primary);
+        border-radius: 50%;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app-container">
+      <!-- Card 1: Visual Display -->
+      <div class="card timer-card">
+        <div class="card-inner">
+          <div class="donut-wrapper">
+            <div class="donut-container">
+              <svg class="donut" viewBox="0 0 300 300">
+                <circle class="donut-bg" cx="150" cy="150" r="130"></circle>
+                <circle
+                  class="donut-segment"
+                  id="progress-ring"
+                  cx="150"
+                  cy="150"
+                  r="130"
+                ></circle>
+              </svg>
+              <div class="time-display">
+                <h1 class="time-text" id="time-display">00:00:00</h1>
+                <div class="status-text" id="status-text">Ready</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="presets-area" id="presets-container">
+            <button
+              class="preset-btn add-preset-btn"
+              id="save-preset-btn"
+              title="Save current time"
+            >
+              + Save
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Controls & Input -->
+      <div class="card control-card">
+        <div class="card-inner">
+          <div class="keypad">
+            <button class="key" onclick="timer.input(1)">1</button>
+            <button class="key" onclick="timer.input(2)">2</button>
+            <button class="key" onclick="timer.input(3)">3</button>
+            <button class="key" onclick="timer.input(4)">4</button>
+            <button class="key" onclick="timer.input(5)">5</button>
+            <button class="key" onclick="timer.input(6)">6</button>
+            <button class="key" onclick="timer.input(7)">7</button>
+            <button class="key" onclick="timer.input(8)">8</button>
+            <button class="key" onclick="timer.input(9)">9</button>
+            <button class="key clear-key" onclick="timer.clearInput()">
+              C
+            </button>
+            <button class="key" onclick="timer.input(0)">0</button>
+            <button class="key" onclick="timer.input(0)">00</button>
+          </div>
+
+          <div class="controls-bottom">
+            <div class="volume-control">
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                style="width: 2.5vmin; min-width: 14px"
+              >
+                <path
+                  d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77zm-4 0h-2.59l-5 5H2v6h4.41l5 5V3.23z"
+                />
+              </svg>
+              <input
+                type="range"
+                id="volume-slider"
+                min="0"
+                max="1"
+                step="0.1"
+                value="0.5"
+              />
+            </div>
+
+            <div class="actions">
+              <button
+                class="btn-round btn-start"
+                id="btn-start"
+                onclick="timer.start()"
+              >
+                <svg class="icon" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </button>
+              <button
+                class="btn-round btn-pause hidden"
+                id="btn-pause"
+                onclick="timer.pause()"
+              >
+                <svg class="icon" viewBox="0 0 24 24">
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                </svg>
+              </button>
+              <button
+                class="btn-round btn-resume hidden"
+                id="btn-resume"
+                onclick="timer.resume()"
+              >
+                <svg class="icon" viewBox="0 0 24 24">
+                  <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z" />
+                </svg>
+              </button>
+              <button
+                class="btn-round btn-stop hidden"
+                id="btn-stop"
+                onclick="timer.stop()"
+              >
+                <svg class="icon" viewBox="0 0 24 24">
+                  <path d="M6 6h12v12H6z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      class BambooTimer {
+        constructor() {
+          this.totalSeconds = 0;
+          this.remainingSeconds = 0;
+          this.intervalId = null;
+          this.status = "IDLE";
+          this.audioCtx = null;
+          this.volume = 0.5;
+          this.inputBuffer = "";
+
+          this.elDisplay = document.getElementById("time-display");
+          this.elStatus = document.getElementById("status-text");
+          this.elRing = document.getElementById("progress-ring");
+          this.elPresets = document.getElementById("presets-container");
+
+          this.circumference = 2 * Math.PI * 130;
+          this.elRing.style.strokeDasharray = `${this.circumference} ${this.circumference}`;
+          this.elRing.style.strokeDashoffset = this.circumference;
+
+          this.btnStart = document.getElementById("btn-start");
+          this.btnPause = document.getElementById("btn-pause");
+          this.btnResume = document.getElementById("btn-resume");
+          this.btnStop = document.getElementById("btn-stop");
+
+          document
+            .getElementById("volume-slider")
+            .addEventListener("input", (e) => {
+              this.volume = parseFloat(e.target.value);
+            });
+
+          document.body.addEventListener("click", () => this.initAudio(), {
+            once: true,
+          });
+          document.body.addEventListener("keydown", () => this.initAudio(), {
+            once: true,
+          });
+
+          this.loadPresets();
+          this.updateDisplay(0);
+        }
+
+        initAudio() {
+          if (!this.audioCtx) {
+            const AudioContext =
+              window.AudioContext || window.webkitAudioContext;
+            this.audioCtx = new AudioContext();
+          }
+          if (this.audioCtx.state === "suspended") {
+            this.audioCtx.resume();
+          }
+        }
+
+        playBambooSound() {
+          this.initAudio();
+
+          const osc = this.audioCtx.createOscillator();
+          const gainNode = this.audioCtx.createGain();
+
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(440, this.audioCtx.currentTime);
+
+          const oscTick = this.audioCtx.createOscillator();
+          const gainTick = this.audioCtx.createGain();
+          oscTick.type = "sine";
+          oscTick.frequency.setValueAtTime(2200, this.audioCtx.currentTime);
+
+          osc.connect(gainNode);
+          oscTick.connect(gainTick);
+          gainNode.connect(this.audioCtx.destination);
+          gainTick.connect(this.audioCtx.destination);
+
+          const now = this.audioCtx.currentTime;
+
+          gainNode.gain.setValueAtTime(0, now);
+          gainNode.gain.linearRampToValueAtTime(this.volume, now + 0.01);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+          gainTick.gain.setValueAtTime(this.volume * 0.5, now);
+          gainTick.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+          osc.start(now);
+          oscTick.start(now);
+          osc.stop(now + 0.5);
+          oscTick.stop(now + 0.5);
+        }
+
+        input(digit) {
+          if (this.status !== "IDLE") return;
+          if (this.inputBuffer.length < 6) {
+            this.inputBuffer += digit.toString();
+            this.parseAndUpdateDisplay();
+          }
+        }
+
+        clearInput() {
+          if (this.status !== "IDLE") {
+            this.stop();
+          }
+          this.inputBuffer = "";
+          this.updateDisplay(0);
+        }
+
+        parseAndUpdateDisplay() {
+          const str = this.inputBuffer.padStart(6, "0");
+          const h = parseInt(str.substring(0, 2));
+          const m = parseInt(str.substring(2, 4));
+          const s = parseInt(str.substring(4, 6));
+
+          const totalSec = h * 3600 + m * 60 + s;
+          this.updateDisplay(totalSec, true);
+        }
+
+        start() {
+          if (this.status === "IDLE") {
+            if (this.inputBuffer === "") return;
+            const str = this.inputBuffer.padStart(6, "0");
+            const h = parseInt(str.substring(0, 2));
+            const m = parseInt(str.substring(2, 4));
+            const s = parseInt(str.substring(4, 6));
+            this.totalSeconds = h * 3600 + m * 60 + s;
+            this.remainingSeconds = this.totalSeconds;
+
+            if (this.totalSeconds === 0) return;
+          }
+
+          this.initAudio();
+          this.status = "RUNNING";
+          this.updateUIState();
+
+          this.intervalId = setInterval(() => this.tick(), 1000);
+          this.tick();
+        }
+
+        pause() {
+          if (this.status === "RUNNING") {
+            clearInterval(this.intervalId);
+            this.status = "PAUSED";
+            this.updateUIState();
+          }
+        }
+
+        resume() {
+          if (this.status === "PAUSED") {
+            this.status = "RUNNING";
+            this.updateUIState();
+            this.intervalId = setInterval(() => this.tick(), 1000);
+          }
+        }
+
+        stop() {
+          clearInterval(this.intervalId);
+          this.status = "IDLE";
+          this.inputBuffer = "";
+          this.updateDisplay(0);
+          this.updateUIState();
+        }
+
+        tick() {
+          this.remainingSeconds--;
+          this.updateDisplay(this.remainingSeconds);
+
+          if (this.remainingSeconds <= 0) {
+            this.alarm();
+            this.stop();
+          }
+        }
+
+        alarm() {
+          this.playBambooSound();
+          setTimeout(() => this.playBambooSound(), 400);
+          setTimeout(() => this.playBambooSound(), 900);
+        }
+
+        formatTime(totalSeconds) {
+          if (totalSeconds < 0) totalSeconds = 0;
+          const h = Math.floor(totalSeconds / 3600);
+          const m = Math.floor((totalSeconds % 3600) / 60);
+          const s = totalSeconds % 60;
+          return `${h.toString().padStart(2, "0")}:${m
+            .toString()
+            .padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+        }
+
+        updateDisplay(seconds, isInput = false) {
+          this.elDisplay.textContent = this.formatTime(seconds);
+
+          let percent = 1;
+          if (!isInput && this.totalSeconds > 0) {
+            percent = seconds / this.totalSeconds;
+          } else if (isInput) {
+            percent = 1;
+          } else {
+            percent = 0;
+          }
+
+          percent = Math.max(0, Math.min(1, percent));
+
+          const offset = this.circumference - percent * this.circumference;
+          this.elRing.style.strokeDashoffset = offset;
+
+          if (percent < 0.15 && this.status === "RUNNING") {
+            this.elRing.style.stroke = "var(--accent)";
+          } else {
+            this.elRing.style.stroke = "var(--primary)";
+          }
+        }
+
+        updateUIState() {
+          this.btnStart.classList.add("hidden");
+          this.btnPause.classList.add("hidden");
+          this.btnResume.classList.add("hidden");
+          this.btnStop.classList.add("hidden");
+
+          if (this.status === "IDLE") {
+            this.elStatus.textContent = "Set Time";
+            this.elStatus.style.color = "var(--text-sub)";
+            this.elRing.style.strokeDashoffset = this.circumference;
+            this.btnStart.classList.remove("hidden");
+            this.btnStart.style.opacity = this.inputBuffer ? "1" : "0.5";
+          } else if (this.status === "RUNNING") {
+            this.elStatus.textContent = "Timing...";
+            this.elStatus.style.color = "var(--primary)";
+            this.btnPause.classList.remove("hidden");
+            this.btnStop.classList.remove("hidden");
+          } else if (this.status === "PAUSED") {
+            this.elStatus.textContent = "Paused";
+            this.elStatus.style.color = "var(--accent)";
+            this.btnResume.classList.remove("hidden");
+            this.btnStop.classList.remove("hidden");
+          }
+        }
+
+        savePreset() {
+          if (this.status === "IDLE" && this.inputBuffer.length > 0) {
+            const rawStr = this.inputBuffer.padStart(6, "0");
+            const formatted = this.formatTime(
+              this.parseBufferToSeconds(rawStr)
+            );
+
+            let presets = JSON.parse(
+              localStorage.getItem("bambooPresets") || "[]"
+            );
+            if (!presets.includes(rawStr)) {
+              presets.push(rawStr);
+              localStorage.setItem("bambooPresets", JSON.stringify(presets));
+              this.renderPresets();
+            }
+          }
+        }
+
+        deletePreset(rawStr) {
+          let presets = JSON.parse(
+            localStorage.getItem("bambooPresets") || "[]"
+          );
+          const newPresets = presets.filter((p) => p !== rawStr);
+          localStorage.setItem("bambooPresets", JSON.stringify(newPresets));
+          this.renderPresets();
+
+          // Haptic feedback if available
+          if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        loadPresets() {
+          this.renderPresets();
+          document.getElementById("save-preset-btn").onclick = () =>
+            this.savePreset();
+        }
+
+        renderPresets() {
+          const presets = JSON.parse(
+            localStorage.getItem("bambooPresets") || "[]"
+          );
+          const addBtn = document.getElementById("save-preset-btn");
+          this.elPresets.innerHTML = "";
+          this.elPresets.appendChild(addBtn);
+
+          presets.forEach((rawStr) => {
+            const btn = document.createElement("button");
+            btn.className = "preset-btn";
+            btn.title = "Tap to load, Long press to delete"; // Tooltip for desktop/mouse
+
+            const totalSec = this.parseBufferToSeconds(rawStr);
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = totalSec % 60;
+
+            let label = "";
+            if (h > 0)
+              label = `${h}:${m.toString().padStart(2, "0")}:${s
+                .toString()
+                .padStart(2, "0")}`;
+            else label = `${m}:${s.toString().padStart(2, "0")}`;
+
+            btn.textContent = label;
+
+            // --- Deletion Logic ---
+            let pressTimer;
+            let isLongPress = false;
+
+            // Touch/Mouse Events
+            btn.addEventListener("contextmenu", (e) => {
+              e.preventDefault(); // Stop browser menu
+              this.deletePreset(rawStr);
+            });
+
+            // Touch start for long press
+            btn.addEventListener(
+              "touchstart",
+              (e) => {
+                isLongPress = false;
+                pressTimer = setTimeout(() => {
+                  isLongPress = true;
+                  // Visual feedback
+                  btn.classList.add("deleting");
+                  if (navigator.vibrate) navigator.vibrate(50);
+                }, 800); // 800ms hold to delete
+              },
+              { passive: true }
+            );
+
+            // Touch end
+            btn.addEventListener("touchend", (e) => {
+              clearTimeout(pressTimer);
+              if (isLongPress) {
+                e.preventDefault(); // Stop click
+                this.deletePreset(rawStr);
+                btn.classList.remove("deleting");
+              }
+            });
+
+            // Move cancels the press (scrolling)
+            btn.addEventListener("touchmove", () => {
+              clearTimeout(pressTimer);
+            });
+
+            // Click to load
+            btn.addEventListener("click", (e) => {
+              // Don't load if we just finished a long press delete sequence
+              if (!isLongPress) {
+                this.stop();
+                this.inputBuffer = rawStr;
+                this.parseAndUpdateDisplay();
+              }
+            });
+
+            this.elPresets.appendChild(btn);
+          });
+        }
+
+        parseBufferToSeconds(str) {
+          const s = str.padStart(6, "0");
+          const h = parseInt(s.substring(0, 2));
+          const m = parseInt(s.substring(2, 4));
+          const sec = parseInt(s.substring(4, 6));
+          return h * 3600 + m * 60 + sec;
+        }
+      }
+
+      const timer = new BambooTimer();
+    </script>
+  </body>
+</html>
