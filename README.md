@@ -22,7 +22,7 @@ A simple, beautiful, and fully responsive countdown timer that lives entirely in
 
 ## 🚀 Installation
 
-1.  **Download:** Save the `index.html` file to your computer.
+1.  **Download:** Save the `zen-bamboo-timer.html` file to your computer.
 2.  **Run:** Double-click the file to open it in Chrome, Firefox, Safari, or Edge.
 3.  **PWA (Optional):** On mobile, use the "Add to Home Screen" option to run it as an app.
 
