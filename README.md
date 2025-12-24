@@ -63,6 +63,6 @@ Feel free to fork this project, customize the colors, or add new features!
 
 ---
 
-Like what I do? [Support this project.]([URL](https://shop.low.li/downloads/help-the-legend-sail-on/)
+Like what I do? [Support this project.](https://shop.low.li/downloads/help-the-legend-sail-on/)
 
 *Made with bamboo & code.*
